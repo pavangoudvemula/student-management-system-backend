@@ -58,9 +58,13 @@
             <br>
             <br>
             <button id="addbtn">ADD STUDENT</button>
+            <button onclick="update()">Update Student</button>
             <br>
             <br>
             <input id="search" placeholder="Search By Student Name">
+            <<br>
+            <button onclick="search()">Search</button>
+
 
 
             </div>
@@ -86,90 +90,87 @@
            
 
      <script>
-        let arr=JSON.parse(localStorage.getItem("records")) || [];
-        display();
-        let eindex=-1;
-        let btn1=document.querySelector("#addbtn");
-        document.querySelector("#search").addEventListener("input",
+         
+         call_all_record();
+         let editingId = null;
+       
         
-            function(){
-                let n=document.querySelector("#search").value;
-                let filte=arr.filter((x)=>x.name.includes(n));
-                display(filte);
-
-                
-            }
-        )
+       
+        let btn1=document.querySelector("#addbtn");
+        
         btn1.addEventListener("click",
-            function(){
-                 let name=document.querySelector("#name").value;
-                let branch=document.querySelector("#branch").value;
-                let perc=Number(document.querySelector("#prec").value);
-                console.log(eindex);
-                if(name.trim()!="" && (branch=="CSE"|| branch=="EEE"|| branch=="CSM"|| branch=="ECE"|| branch=="CSD") &&(perc<=100 && perc>=0) ){
-                     if(eindex==-1){
-                    
-                arr.push(
-                    {
-                        "name":name,
-                        "branch":branch,
-                        "perc":perc,
-                        id:Date.now()
+            async function(){
+                try{
 
-                    }
+                     let name=document.querySelector("#name").value;
+                 let branch=document.querySelector("#branch").value;
+                 let perc=Number(document.querySelector("#prec").value);
+                 const response=await fetch("http://localhost:3000/students",{
+                    method:"POST",
+                    headers:{ "content-Type":"application/json"
+                },
+                body:JSON.stringify(
+                    {
+    "name": name,
+    "branch": branch,
+    "perc": perc
+}
                 )
 
-                
-
-                }
-               
-                else{
-                    arr[eindex].name=name;
-                    arr[eindex].branch=branch;
-                    arr[eindex].perc=perc;
-                    eindex=-1;
-                }
-                localStorage.setItem("records",JSON.stringify(arr));
-                document.querySelector("#name").value="";
-                document.querySelector("#branch").value="";
-                document.querySelector("#prec").value=""
-                display();
-
+                })
+                const data= await response.text();
+                if(response.ok){
+                    console.log(data);
+                    call_all_record();
+                    document.querySelector("#name").value="";
+                    document.querySelector("#branch").value="";
+                    document.querySelector("#prec").value=""
                 }
                 else{
-                    alert("ENTER VALID INFORMATION (ALLOWED BRANCHES CSE,EEE,CSM,CSD) (ALLOWED PERCENTAGE 0 to 100) , VALID NAME");
+                    alert("Error: "+data);
 
                 }
+                
+                
+                
+                
+
+               
+                
+               
+                }
+                catch(error){
+                    alert("Error: "+error);
+                }
+                  
+
+              
+                }
+                
                
                 
 
 
                
-            }
+            
 
         )
-        function display( p){
-            if(p!=null){
-                filter=[...p];
-                
+        function display(data){
 
-            }
-            else{
-                filter=[...arr];
-
-            }
            
-            let container=document.querySelector("#container");
+                   filter=[...data];
+                  let container=document.querySelector("#container");
             container.innerHTML="";
             for(let i=0;i<filter.length;i++){
-                 let box=document.createElement("div");
+                let box=document.createElement("div");
                 let p1=document.createElement("p");
                 let p2=document.createElement("p");
                 let p3=document.createElement("p");
                 let delte=document.createElement("button");
                 let edit=document.createElement("button");
                 edit.textContent="EDIT";
-                edit.dataset.index=i;
+                edit.dataset.index = i;
+               
 
                 delte.textContent="DELETE";
                 delte.dataset.index=i;
@@ -188,35 +189,160 @@
                 main.appendChild(box);
 
                 delte.addEventListener("click",
-                    function(event){
-                        let index=event.target.dataset.index;
-                        let id=filter[index].id;
-                        let newindex=arr.findIndex((x)=>x.id==id);
-                        arr.splice(newindex,1);
-                        localStorage.setItem("records",JSON.stringify(arr));
-                        display();
+                    async function(event){
+                        try{
 
+                            let record=event.target.dataset.index;
+                        let id=filter[record].id;
+                        const response=await fetch("http://localhost:3000/students/"+id,{
+                            method:"DELETE",
+                            
+                        })
+                        const data=await response.text();
+                       
+                        if(response.ok){
+                            call_all_record();
+                             console.log(data);
+                        }
+                        else{
+                            alert("Error: "+data);
+                        }
+
+
+                        }
+                        catch(error){
+                            alert("Error:"+error);
+
+                        }
+                        
+                       
+
+
+            
+
+
+                   
                     }
                 )
                 edit.addEventListener("click",
                     function(event){
-                         eindex=event.target.dataset.index;
-                         let id=filter[eindex].id;
-                         let newindex=arr.findIndex((x)=>x.id==id);
-                         eindex=newindex;
-                    
-                        let  student =arr[newindex];
+                         index=event.target.dataset.index;
+                         
+                        let  student =filter[index];
                         document.querySelector("#name").value=student.name;
                         document.querySelector("#branch").value=student.branch;
                         document.querySelector("#prec").value=student.perc;
+                        editingId =student.id;
+                      
+
+
+
 
                        
                         
 
                     }
                 )
+            
+            
+
             }
+          
+           
+           
+
+            
+           
+          
         }
+                    async function update(){
+                        try{
+
+                            namea=document.querySelector("#name").value;
+                        branch=document.querySelector("#branch").value;
+                        perc=Number(document.querySelector("#prec").value);
+                         
+                            const response=await fetch("http://localhost:3000/students/"+editingId,{
+                                method:"PUT",
+                                headers:{ "content-Type":"application/json"},
+                                body:JSON.stringify({
+                                    name:namea,
+                                    branch:branch,
+                                    perc:perc
+
+                                })
+                               
+                            })
+                               const data=await response.text();
+                             if(response.ok){
+                                  console.log(data);
+                               call_all_record();
+                               editingId = null;
+                               document.querySelector("#name").value="";
+                               document.querySelector("#branch").value="";
+                               document.querySelector("#prec").value="";
+                             }
+                             else{
+                                alert("Error: "+data);
+                             }
+                        }
+                        catch(error){
+                            alert("Error: "+error);
+                        }
+                            
+
+                        }
+
+        async function search(){
+            try{
+                let val=document.querySelector("#search").value;
+            const response=await fetch("http://localhost:3000/students?name="+val)
+            const data=await response.json();
+            if(response.ok){
+               if(data.length>0){
+                 display(data);
+               }
+               else{
+                alert("students not found");
+               }
+
+            }
+            else{
+                
+            }
+            
+            }
+            catch(error){
+                alert("Error:"+error);
+            }
+
+            
+           
+
+            
+
+            
+        }
+        async function call_all_record(){
+             try{
+                const response=await fetch("http://localhost:3000/students");
+             const data=await response.json();
+             
+                display(data);
+             }
+             catch(error){
+                alert("Error: "+error);
+             }
+
+            
+             
+            
+        }
+     
+
+
+ 
+
 
         
      </script>
