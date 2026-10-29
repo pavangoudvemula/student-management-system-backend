@@ -1,104 +1,131 @@
-const students = require("../data/studentStore");
+const db = require("../db");
 
 function getStudents(req, res, next) {
-try {
 const name = req.query.name;
 
 
-    if (name !== undefined) {
-        const specificStudents = students.filter(function (student) {
-            return student.name === name;
-        });
+let sql = "SELECT * FROM students";
+let values = [];
 
-        return res.status(200).json(specificStudents);
-    }
-
-    return res.status(200).json(students);
-} catch (err) {
-    return next(err);
+if (name !== undefined) {
+    sql += " WHERE name = ?";
+    values.push(name);
 }
+
+db.query(sql, values, (err, results) => {
+    if (err) return next(err);
+    return res.status(200).json(results);
+});
+
+
+}
+
+function addStudent(req, res, next) {
+const student = req.body;
+
+
+if (
+    !student ||
+    typeof student.name !== "string" ||
+    student.name.trim() === "" ||
+    !["CSE", "ECE", "EEE", "CSM", "CSD"].includes(student.branch) ||
+    typeof student.perc !== "number" ||
+    !Number.isFinite(student.perc) ||
+    student.perc < 0 ||
+    student.perc > 100
+) {
+    return res.status(400).send("Student addition unsuccessful");
+}
+
+const sql =
+    "INSERT INTO students (name, branch, perc) VALUES (?, ?, ?)";
+
+db.query(
+    sql,
+    [student.name.trim(), student.branch, student.perc],
+    (err, result) => {
+        if (err) return next(err);
+
+        return res.status(201).json({
+            message: "Student added successfully",
+            id: result.insertId
+        });
+    }
+);
+
+
+}
+
+function updateStudent(req, res, next) {
+const id = Number(req.params.id);
+const student = req.body;
+
+
+if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).send("Invalid student ID");
+}
+
+if (
+    !student ||
+    typeof student.name !== "string" ||
+    student.name.trim() === "" ||
+    !["CSE", "ECE", "EEE", "CSM", "CSD"].includes(student.branch) ||
+    typeof student.perc !== "number" ||
+    !Number.isFinite(student.perc) ||
+    student.perc < 0 ||
+    student.perc > 100
+) {
+    return res.status(400).send("Invalid student data");
+}
+
+const sql =
+    "UPDATE students SET name = ?, branch = ?, perc = ? WHERE id = ?";
+
+db.query(
+    sql,
+    [student.name.trim(), student.branch, student.perc, id],
+    (err, result) => {
+        if (err) return next(err);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).send("Student not found");
+        }
+
+        return res.status(200).send("Student updated successfully");
+    }
+);
 
 
 }
 
 function deleteStudent(req, res, next) {
-    try {
-        const id = req.params.id;
+const id = Number(req.params.id);
 
-        const index = students.findIndex(function (student) {
-            return student.id == id;
-        });
 
-        if (index !== -1) {
-            students.splice(index, 1);
-            return res.status(200).send("Student deleted successfully");
-        }
-
-        return res.status(404).send("Student not found");
-    } catch (err) {
-        return next(err);
-    }
+if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).send("Invalid student ID");
 }
 
-function updateStudent(req, res, next) {
-    try {
-        const id = req.params.id;
-        const student = req.body;
+db.query(
+    "DELETE FROM students WHERE id = ?",
+    [id],
+    (err, result) => {
+        if (err) return next(err);
 
-        const index = students.findIndex(function (s) {
-            return s.id == id;
-        });
-
-        if (index === -1) {
+        if (result.affectedRows === 0) {
             return res.status(404).send("Student not found");
         }
 
-        if (
-            typeof student.name !== "string" ||
-            student.name.trim() === "" ||
-            !["CSE", "ECE", "EEE", "CSM", "CSD"].includes(student.branch) ||
-            typeof student.perc !== "number" ||
-            student.perc < 0 ||
-            student.perc > 100
-        ) {
-            return res.status(400).send("Invalid student data");
-        }
-
-        students[index].name = student.name;
-        students[index].branch = student.branch;
-        students[index].perc = student.perc;
-
-        return res.status(200).send("Student updated successfully");
-    } catch (err) {
-        return next(err);
+        return res.status(200).send("Student deleted successfully");
     }
-}
+);
 
-function addStudent(req, res, next) {
-    try {
-        const student = req.body;
 
-        if (
-            student.name.trim() !== "" &&
-            ["CSE", "ECE", "EEE", "CSM", "CSD"].includes(student.branch) &&
-            student.perc >= 0 &&
-            student.perc <= 100
-        ) {
-            student.id = Date.now();
-            students.push(student);
-
-            return res.status(201).send("Student added successfully");
-        }
-
-        return res.status(400).send("Student addition unsuccessful");
-    } catch (err) {
-        return next(err);
-    }
 }
 
 module.exports = {
-    getStudents: getStudents,
-    addStudent: addStudent,
-    deleteStudent: deleteStudent,
-    updateStudent: updateStudent
+getStudents,
+addStudent,
+updateStudent,
+deleteStudent
 };
